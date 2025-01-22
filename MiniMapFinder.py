@@ -21,26 +21,37 @@ def create_minimaps(Z, N):
     # Create the MiniMaps directory if it doesn't exist
     os.makedirs("MiniMaps", exist_ok=True)
 
-    # Read the WholeMap file
-    print(f"Reading WholeMap file: {input_file}")
-    df = pd.read_csv(input_file, sep=' ', header=None,
-                     names=['M', 'E', 'ELD', 'ESH', 'B10', 'B20', 'B30', 'B40', 'B50', 'B60'])
-
-    # Filter the data for the specified ranges of B20 and B30
-    filtered_points_6d = df[
-        (df['B20'] >= 0.0) & (df['B20'] <= 2.0) &
-        (df['B30'] >= -0.5) & (df['B30'] <= 0.5)
+    # Initialize empty DataFrames for filtered points
+    filtered_points_6d = pd.DataFrame()
+    filtered_points_4d = pd.DataFrame()
+    
+    # Read and process the WholeMap file in chunks
+    print(f"Reading WholeMap file in chunks: {input_file}")
+    chunk_size = 100_000  # Adjust based on available memory
+    
+    for chunk in pd.read_csv(input_file, sep=' ', header=None,
+                            names=['M', 'E', 'ELD', 'ESH', 'B10', 'B20', 'B30', 'B40', 'B50', 'B60'],
+                            chunksize=chunk_size):
+        
+        # Filter chunk for 6D points
+        chunk_6d = chunk[
+            (chunk['B20'] >= 0.0) & (chunk['B20'] <= 2.0) &
+            (chunk['B30'] >= -0.5) & (chunk['B30'] <= 0.5)
         ]
-
-    # Additional filter for 4D MiniMap
-    filtered_points_4d = filtered_points_6d[
-        (filtered_points_6d['B50'] == 0.0) &
-        (filtered_points_6d['B60'] == 0.0)
+        
+        # Filter chunk for 4D points
+        chunk_4d = chunk_6d[
+            (chunk_6d['B50'] == 0.0) &
+            (chunk_6d['B60'] == 0.0)
         ]
-
-    # Free memory
-    del df
-    gc.collect()
+        
+        # Append filtered chunks to main DataFrames
+        filtered_points_6d = pd.concat([filtered_points_6d, chunk_6d], ignore_index=True)
+        filtered_points_4d = pd.concat([filtered_points_4d, chunk_4d], ignore_index=True)
+        
+        # Free memory
+        del chunk, chunk_6d, chunk_4d
+        gc.collect()
 
     # Define starting points
     starting_points = {
