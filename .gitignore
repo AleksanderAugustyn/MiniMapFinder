@@ -9,3 +9,4 @@ gen
 *.txt
 WholeMaps
 MiniMaps
+.aider*
