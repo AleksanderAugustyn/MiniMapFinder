@@ -14,9 +14,12 @@ def create_minimaps(Z, N):
     output_file_4d_starting = f"MiniMaps/{Z}_{N}_4D_Starting_MiniMap.txt"
     output_file_6d_fusion = f"MiniMaps/{Z}_{N}_6D_Fusion_MiniMap.txt"
     output_file_4d_fusion = f"MiniMaps/{Z}_{N}_4D_Fusion_MiniMap.txt"
-    # New output files for B10-constant minimaps
+    # Output files for B10-constant minimaps
     output_file_6d_b10_const = f"MiniMaps/{Z}_{N}_6D_B10const_MiniMap.txt"
     output_file_4d_b10_const = f"MiniMaps/{Z}_{N}_4D_B10const_MiniMap.txt"
+    # New output files for B40-constant minimaps
+    output_file_6d_b40_const = f"MiniMaps/{Z}_{N}_6D_B40const_MiniMap.txt"
+    output_file_4d_b40_const = f"MiniMaps/{Z}_{N}_4D_B40const_MiniMap.txt"
 
     # Create the MiniMaps directory if it doesn't exist
     os.makedirs("MiniMaps", exist_ok=True)
@@ -150,6 +153,55 @@ def create_minimaps(Z, N):
             if len(points_4d_b10) > 0:
                 process_and_save_minimap(points_4d_b10, output_4d)
 
+    def create_b40_constant_minimaps(points_6d, points_4d, output_file_6d, output_file_4d):
+        # Define specific B40 values to process
+        b40_values = np.arange(-0.5, 0.51, 0.05)
+
+        # Round the B40 values to 3 decimal places, round -0 to 0
+        b40_values = [round(x, 3) if abs(x) >= 1e-10 else 0 for x in b40_values]
+
+        print(f"Processing {len(b40_values)} specified B40 values: {b40_values}")
+
+        # Process each B40 value
+        for b40_val in b40_values:
+            # Filter points for current B40 value with tolerance
+            tolerance = 0.001  # Adjust if needed
+            points_6d_b40 = points_6d[abs(points_6d['B40'] - b40_val) < tolerance]
+            points_4d_b40 = points_4d[abs(points_4d['B40'] - b40_val) < tolerance]
+
+            # Create output filenames with B40 value
+            output_6d = output_file_6d.replace('.txt', f'_B40_{b40_val:.3f}.txt')
+            output_4d = output_file_4d.replace('.txt', f'_B40_{b40_val:.3f}.txt')
+
+            # Process and save minimaps for this B40 value
+            if len(points_6d_b40) > 0:
+                process_and_save_minimap(points_6d_b40, output_6d)
+            if len(points_4d_b40) > 0:
+                process_and_save_minimap(points_4d_b40, output_4d)
+
+    def create_b10_b40_constant_minimaps(points_6d, output_file_6d):
+        # Define specific B10 values to process
+        b10_values = np.arange(-0.4, 0.41, 0.05)
+        b40_values = np.arange(-0.4, 0.41, 0.05)
+
+        # Round the B10 and B40 values to 3 decimal places, round -0 to 0
+        b10_values = [round(x, 3) if abs(x) >= 1e-10 else 0 for x in b10_values]
+        b40_values = [round(x, 3) if abs(x) >= 1e-10 else 0 for x in b40_values]
+
+        # Process each B10 value
+        for b10_val in b10_values:
+            for b40_val in b40_values:
+                # Filter points for current B10 and B40 value
+                tolerance = 0.001
+                points_6d_b10_b40 = points_6d[(abs(points_6d['B10'] - b10_val) < tolerance) & (abs(points_6d['B40'] - b40_val) < tolerance)]
+
+                # Create output filenames with B10 and B40 value
+                output_6d = output_file_6d.replace('.txt', f'_B10_{b10_val:.3f}_B40_{b40_val:.3f}.txt')
+
+                # Process and save minimaps for this B10 and B40 value
+                if len(points_6d_b10_b40) > 0:
+                    process_and_save_minimap(points_6d_b10_b40, output_6d)
+
     # Process and save regular minimaps
     process_and_save_minimap(filtered_points_6d, output_file_6d)
     process_and_save_minimap(filtered_points_4d, output_file_4d)
@@ -157,6 +209,13 @@ def create_minimaps(Z, N):
     # Process and save B10-constant minimaps
     create_b10_constant_minimaps(filtered_points_6d, filtered_points_4d,
                                  output_file_6d_b10_const, output_file_4d_b10_const)
+
+    # Process and save B40-constant minimaps
+    create_b40_constant_minimaps(filtered_points_6d, filtered_points_4d,
+                                 output_file_6d_b40_const, output_file_4d_b40_const)
+
+    # Process and save B10 and B40 constant minimaps
+    create_b10_b40_constant_minimaps(filtered_points_6d, output_file_6d)
 
     # Create and save starting minimaps if starting points exist
     if (Z, N) in starting_points:
@@ -167,7 +226,7 @@ def create_minimaps(Z, N):
 
 
 if __name__ == "__main__":
-    parser = argparse.ArgumentParser(description="Create 6D and 4D MiniMaps from a WholeMap file, including B10-constant maps.")
+    parser = argparse.ArgumentParser(description="Create 6D and 4D MiniMaps from a WholeMap file, including B10-constant and B40-constant maps.")
     parser.add_argument("Protons", type=int, help="Proton number")
     parser.add_argument("Neutrons", type=int, help="Neutron number")
     args = parser.parse_args()
